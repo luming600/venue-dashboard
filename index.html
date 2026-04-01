@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>杆杆响天梯赛 · 内部知识库</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f7fa; color: #333; line-height: 1.6; }
+        .header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; padding: 16px 32px; position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; }
+        .logo { display: flex; align-items: center; gap: 12px; }
+        .logo-icon { width: 40px; height: 40px; background: linear-gradient(135deg, #e94560 0%, #ff6b6b 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; }
+        .logo h1 { font-size: 20px; }
+        .logo span { font-size: 13px; opacity: 0.7; margin-left: 8px; }
+        .search-box { position: relative; width: 320px; }
+        .search-box input { width: 100%; padding: 10px 16px 10px 40px; border: none; border-radius: 8px; background: rgba(255,255,255,0.1); color: white; font-size: 14px; outline: none; }
+        .search-box input::placeholder { color: rgba(255,255,255,0.5); }
+        .search-box input:focus { background: rgba(255,255,255,0.2); }
+        .search-box::before { content: "🔍"; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); }
+        .main-container { display: flex; margin-top: 72px; min-height: calc(100vh - 72px); }
+        .sidebar { width: 280px; background: white; border-right: 1px solid #e8e8e8; position: fixed; top: 72px; left: 0; bottom: 0; overflow-y: auto; padding: 20px 0; }
+        .sidebar-title { padding: 0 20px 12px; font-size: 12px; color: #999; border-bottom: 1px solid #f0f0f0; margin-bottom: 8px; }
+        .nav-item { display: flex; align-items: center; padding: 12px 20px; cursor: pointer; border-left: 3px solid transparent; }
+        .nav-item:hover { background: #f8f9fa; }
+        .nav-item.active { background: #fff5f5; border-left-color: #e94560; }
+        .nav-item.active .nav-icon { background: #e94560; color: white; }
+        .nav-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; margin-right: 12px; background: #f0f0f0; }
+        .nav-text { flex: 1; }
+        .nav-text h3 { font-size: 14px; }
+        .nav-text span { font-size: 12px; color: #999; }
+        .nav-count { background: #f0f0f0; padding: 2px 8px; border-radius: 10px; font-size: 12px; color: #666; }
+        .content { flex: 1; margin-left: 280px; padding: 32px; }
+        .content-header { margin-bottom: 24px; }
+        .content-header h2 { font-size: 24px; margin-bottom: 8px; }
+        .content-header p { color: #666; }
+        .doc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .doc-card { background: white; border-radius: 12px; padding: 20px; cursor: pointer; border: 1px solid #eee; }
+        .doc-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); border-color: #e94560; }
+        .doc-card-header { display: flex; align-items: center; margin-bottom: 12px; }
+        .doc-badge { background: linear-gradient(135deg, #e94560 0%, #ff6b6b 100%); color: white; padding: 4px 10px; border-radius: 4px; font-size: 12px; margin-right: 10px; }
+        .doc-card h3 { font-size: 16px; flex: 1; }
+        .doc-card p { font-size: 13px; color: #666; margin-bottom: 12px; }
+        .doc-card-footer { display: flex; justify-content: space-between; padding-top: 12px; border-top: 1px solid #f0f0f0; }
+        .doc-meta { font-size: 12px; color: #999; }
+        .doc-status { font-size: 12px; padding: 3px 8px; border-radius: 4px; }
+        .doc-status.complete { background: #e8f5e9; color: #2e7d32; }
+        .doc-status.draft { background: #fff3e0; color: #ef6c00; }
+        .doc-detail-header { display: flex; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #eee; }
+        .back-btn { padding: 8px 16px; background: #f0f0f0; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; margin-right: 16px; }
+        .back-btn:hover { background: #e0e0e0; }
+        .doc-detail-title { font-size: 24px; }
+        .doc-detail-body { background: white; border-radius: 12px; padding: 32px; border: 1px solid #eee; max-width: 900px; }
+        .markdown-body h1 { font-size: 28px; border-bottom: 1px solid #eee; padding-bottom: 16px; margin-bottom: 24px; color: #1a1a2e; }
+        .markdown-body h2 { font-size: 20px; margin-top: 32px; margin-bottom: 16px; color: #1a1a2e; border-left: 4px solid #e94560; padding-left: 12px; }
+        .markdown-body h3 { font-size: 16px; margin-top: 24px; margin-bottom: 12px; }
+        .markdown-body p { margin-bottom: 16px; color: #555; line-height: 1.8; }
+        .markdown-body ul, .markdown-body ol { margin-bottom: 16px; padding-left: 24px; }
+        .markdown-body li { margin-bottom: 8px; }
+        .markdown-body table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 14px; }
+        .markdown-body th, .markdown-body td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        .markdown-body th { background: #f8f9fa; }
+        .markdown-body hr { border: none; border-top: 1px solid #eee; margin: 24px 0; }
+        .welcome { text-align: center; padding: 60px 40px; }
+        .welcome-icon { font-size: 64px; margin-bottom: 24px; }
+        .welcome h2 { font-size: 28px; margin-bottom: 12px; }
+        .welcome p { color: #666; max-width: 500px; margin: 0 auto 32px; }
+        .quick-links { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+        .quick-link { background: white; padding: 16px 24px; border-radius: 10px; cursor: pointer; border: 1px solid #eee; }
+        .quick-link:hover { border-color: #e94560; }
+        .quick-link h4 { font-size: 14px; margin-bottom: 4px; }
+        .quick-link span { font-size: 12px; color: #999; }
+        .search-results.show { display: block; }
+        .search-result-item { background: white; padding: 16px 20px; border-radius: 8px; margin-bottom: 12px; cursor: pointer; border: 1px solid #eee; }
+        .search-result-item:hover { border-color: #e94560; }
+        .search-result-item h4 { font-size: 15px; margin-bottom: 4px; }
+        .search-result-item p { font-size: 13px; color: #666; }
+        .search-result-item .tag { display: inline-block; background: #f0f0f0; padding: 2px 8px; border-radius: 4px; font-size: 11px; color: #666; margin-right: 8px; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo"><div class="logo-icon">杆</div><h1>杆杆响天梯赛 <span>内部知识库</span></h1></div>
+        <div class="search-box"><input type="text" id="searchInput" placeholder="搜索文档..." oninput="handleSearch(this.value)"></div>
+    </header>
+    <div class="main-container">
+        <nav class="sidebar"><div class="sidebar-title">知识库导航</div><div id="navList"></div></nav>
+        <main class="content" id="content"></main>
+    </div>
+    <script src="doc_contents.js"></script>
+    <script>
+const knowledgeBase = {
+    categories: [
+        { id: 1, name: "产品与战略层", icon: "📊", desc: "产品定位、战略规划、核心模型", documents: [
+            { id: "P-01", title: "杆杆响天梯赛产品白皮书", desc: "公司介绍、核心理念、功能模块、技术架构", audience: "投资者、大客户、合作伙伴", status: "complete" },
+            { id: "P-02", title: "球房等级体系（L1-L4）详解", desc: "各等级定位、权益对比、晋级门槛、评估标准", audience: "销售、客户成功、球房老板", status: "complete" },
+            { id: "P-03", title: "积分经济模型白皮书", desc: "积分获取规则、消耗场景、成本收益模型", audience: "球房老板、财务、运营", status: "complete" }
+        ]},
+        { id: 2, name: "球房运营赋能层", icon: "🏪", desc: "部署启动、日常运营、活动策划", documents: [
+            { id: "O-01", title: "球房部署与启动手册", desc: "签约对接流程、硬件准备、系统配置", audience: "球房店长、对接人", status: "complete" },
+            { id: "O-02", title: "球房日常运营SOP", desc: "运营日历、店员话术、社群运营、赛事组织", audience: "球房店长、核心店员", status: "complete" },
+            { id: "O-03", title: "玩家荣誉体系与活动库", desc: "晋升海报、颁奖仪式、社群活动", audience: "球房店长、运营专员", status: "draft" }
+        ]},
+        { id: 3, name: "销售与招商赋能层", icon: "💼", desc: "销售流程、招商方案、渠道政策", documents: [
+            { id: "S-01", title: "销售精英作战手册", desc: "价值定位、客户画像、销售五步法、异议话术", audience: "销售团队", status: "draft" },
+            { id: "S-02", title: "招商合作方案（品牌版）", desc: "合作价值主张、模式报价、用户画像", audience: "商务拓展、潜在赞助商", status: "draft" },
+            { id: "S-03", title: "渠道与代理政策", desc: "招募标准、代理权益、分成模式", audience: "渠道经理、代理商", status: "draft" }
+        ]},
+        { id: 4, name: "规则与政策层", icon: "📋", desc: "公平竞技、隐私政策、积分规则", documents: [
+            { id: "R-01", title: "公平竞技条款", desc: "禁止行为、监督机制、处罚分级、申诉流程", audience: "所有玩家、球房、运营", status: "complete" },
+            { id: "R-02", title: "隐私政策与用户协议", desc: "数据收集范围、用户权利义务", audience: "玩家、合作方", status: "complete" },
+            { id: "R-03", title: "积分兑换与提现规则", desc: "积分有效期、提现门槛、异常处理", audience: "玩家、球房", status: "complete" }
+        ]},
+        { id: 5, name: "常见问题与支持层", icon: "❓", desc: "球房FAQ、玩家FAQ、客服手册", documents: [
+            { id: "F-01", title: "球房常见问题FAQ", desc: "部署、操作、赛事、积分、结算等问题", audience: "球房、客户成功", status: "complete" },
+            { id: "F-02", title: "玩家常见问题FAQ", desc: "注册登录、约战、积分、兑换、提现", audience: "玩家、客服", status: "complete" },
+            { id: "F-03", title: "客服响应手册", desc: "标准服务流程、情绪安抚话术", audience: "客服团队", status: "draft" }
+        ]},
+        { id: 6, name: "案例与数据层", icon: "📈", desc: "成功案例、玩家故事、运营数据", documents: [
+            { id: "C-01", title: "合作球房成功案例集", desc: "球房概况、运营数据、老板感言", audience: "销售、市场、潜在客户", status: "draft" },
+            { id: "C-02", title: "玩家故事与高光时刻", desc: "玩家专访、精彩比赛视频", audience: "社群、公众号", status: "draft" },
+            { id: "C-03", title: "运营数据白皮书（季度）", desc: "平台数据趋势、玩家行为洞察", audience: "内部战略、大客户", status: "draft" }
+        ]},
+        { id: 7, name: "内部培训与制度层", icon: "👥", desc: "入职培训、岗位SOP、复盘模板", documents: [
+            { id: "T-01", title: "新员工入职培训手册", desc: "公司文化历史、产品认知、岗位职责", audience: "新员工", status: "draft" },
+            { id: "T-02", title: "岗位SOP手册", desc: "销售SOP、客户成功SOP、运营SOP", audience: "各岗位员工", status: "draft" },
+            { id: "T-03", title: "月度复盘模板", desc: "数据统计模板、问题改进记录", audience: "各部门", status: "draft" }
+        ]},
+        { id: 8, name: "技术文档层", icon: "⚙️", desc: "部署运维、API接口、数据字典", documents: [
+            { id: "D-01", title: "系统部署与运维指南", desc: "服务器环境、安装升级、监控告警", audience: "技术团队", status: "draft" },
+            { id: "D-02", title: "API接口文档", desc: "接口列表、调用方式、参数说明", audience: "开发人员、合作伙伴", status: "draft" },
+            { id: "D-03", title: "数据字典与统计口径", desc: "数据库表结构、关键指标定义", audience: "数据分析、产品", status: "draft" }
+        ]},
+        { id: 9, name: "天梯赛推广层", icon: "📢", desc: "推广策略、招商推广、玩家拉新", documents: [
+            { id: "G-01", title: "天梯赛推广策略总纲", desc: "推广目标、渠道矩阵、节奏规划", audience: "市场部、运营部、管理层", status: "draft" },
+            { id: "G-02", title: "球房招商推广方案（B2B）", desc: "目标球房画像、推广渠道打法", audience: "销售团队、商务拓展", status: "draft" },
+            { id: "G-03", title: "玩家拉新与活跃推广方案（B2C）", desc: "拉新策略、留存策略、短视频推广", audience: "运营专员、球房店长", status: "draft" }
+        ]}
+    ]
+};
+
+let currentCategory = null;
+let currentDoc = null;
+
+function renderNav() {
+    document.getElementById('navList').innerHTML = knowledgeBase.categories.map(cat => 
+        `<div class="nav-item ${currentCategory === cat.id && !currentDoc ? 'active' : ''}" onclick="selectCategory(${cat.id})">
+            <div class="nav-icon">${cat.icon}</div>
+            <div class="nav-text"><h3>${cat.id}、${cat.name}</h3><span>${cat.desc}</span></div>
+            <span class="nav-count">${cat.documents.length}</span>
+        </div>`
+    ).join('');
+}
+
+function selectCategory(id) { currentCategory = id; currentDoc = null; renderNav(); renderContent(); }
+
+function renderContent() {
+    const content = document.getElementById('content');
+    if (currentDoc) { renderDocDetail(); return; }
+    if (!currentCategory) { renderWelcome(); return; }
+    const category = knowledgeBase.categories.find(c => c.id === currentCategory);
+    content.innerHTML = `<div class="content-header"><h2>${category.icon} ${category.id}、${category.name}</h2><p>${category.desc}</p></div>
+        <div class="doc-grid">${category.documents.map(doc => 
+            `<div class="doc-card" onclick="openDoc('${doc.id}')">
+                <div class="doc-card-header"><span class="doc-badge">${doc.id}</span><h3>${doc.title}</h3></div>
+                <p>${doc.desc}</p>
+                <div class="doc-card-footer"><span class="doc-meta">适用：${doc.audience}</span><span class="doc-status ${doc.status}">${doc.status === 'complete' ? '已完善' : '待完善'}</span></div>
+            </div>`
+        ).join('')}</div>`;
+}
+
+function renderDocDetail() {
+    const category = knowledgeBase.categories.find(c => c.id === currentCategory);
+    const doc = category.documents.find(d => d.id === currentDoc);
+    const md = docContents[currentDoc] || '# 内容待补充';
+    document.getElementById('content').innerHTML = `<div class="doc-detail-header">
+        <button class="back-btn" onclick="goBack()">← 返回列表</button>
+        <span class="doc-detail-title">${doc.id} ${doc.title}</span></div>
+        <div class="doc-detail-body markdown-body">${marked.parse(md)}</div>`;
+}
+
+function goBack() { currentDoc = null; renderNav(); renderContent(); }
+function openDoc(id) { currentDoc = id; renderNav(); renderContent(); }
+
+function renderWelcome() {
+    document.getElementById('content').innerHTML = `<div class="welcome">
+        <div class="welcome-icon">📚</div><h2>欢迎使用杆杆响天梯赛知识库</h2>
+        <p>包含产品战略、运营赋能、销售招商、规则政策等9大板块共27份核心文档。</p>
+        <div class="quick-links">${knowledgeBase.categories.slice(0, 4).map(cat => 
+            `<div class="quick-link" onclick="selectCategory(${cat.id})"><h4>${cat.icon} ${cat.name}</h4><span>${cat.documents.length} 份文档</span></div>`
+        ).join('')}</div></div>`;
+}
+
+function handleSearch(keyword) {
+    if (!keyword.trim()) { renderContent(); return; }
+    const results = [];
+    knowledgeBase.categories.forEach(cat => {
+        cat.documents.forEach(doc => {
+            if (doc.title.includes(keyword) || doc.desc.includes(keyword) || doc.id.toLowerCase().includes(keyword.toLowerCase())) {
+                results.push({ ...doc, categoryName: cat.name, categoryId: cat.id });
+            }
+        });
+    });
+    if (!results.length) {
+        document.getElementById('content').innerHTML = `<div class="welcome"><div class="welcome-icon">🔍</div><h2>未找到相关文档</h2><p>尝试其他关键词</p></div>`;
+        return;
+    }
+    document.getElementById('content').innerHTML = `<div class="content-header"><h2>搜索结果：${keyword}</h2><p>找到 ${results.length} 份文档</p></div>
+        <div class="search-results show">${results.map(doc => 
+            `<div class="search-result-item" onclick="currentCategory=${doc.categoryId};openDoc('${doc.id}')">
+                <span class="tag">${doc.categoryName}</span><span class="tag">${doc.id}</span><h4>${doc.title}</h4><p>${doc.desc}</p></div>`
+        ).join('')}</div>`;
+}
+
+renderNav();
+renderWelcome();
+    </script>
+</body>
+</html>
