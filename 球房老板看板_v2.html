@@ -118,6 +118,29 @@
             position: sticky;
             top: 0;
         }
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s;
+        }
+        th.sortable:hover {
+            background: rgba(46,204,113,0.4);
+        }
+        th.sortable::after {
+            content: ' ⇅';
+            opacity: 0.4;
+            margin-left: 5px;
+        }
+        th.sort-asc::after {
+            content: ' ↑';
+            opacity: 1;
+            color: #2ECC71;
+        }
+        th.sort-desc::after {
+            content: ' ↓';
+            opacity: 1;
+            color: #2ECC71;
+        }
         td { 
             padding: 14px 12px; 
             border-bottom: 1px solid rgba(255,255,255,0.08); 
@@ -187,6 +210,86 @@
         .table-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 4px; }
         .table-scroll::-webkit-scrollbar-thumb { background: rgba(46,204,113,0.5); border-radius: 4px; }
         .table-scroll::-webkit-scrollbar-thumb:hover { background: rgba(46,204,113,0.7); }
+        
+        /* 积分兑换率样式 */
+        .exchange-stats {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .exchange-item {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+        }
+        .exchange-item.highlight {
+            background: linear-gradient(135deg, rgba(46,204,113,0.3), rgba(39,174,96,0.3));
+            border: 2px solid #2ECC71;
+        }
+        .exchange-label {
+            display: block;
+            color: #aaa;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+        .exchange-value {
+            display: block;
+            color: #2ECC71;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .exchange-item.highlight .exchange-value {
+            color: #FFD700;
+        }
+        
+        /* 排名标签样式 */
+        .ranking-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .ranking-tab {
+            padding: 10px 25px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            color: #ccc;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+        .ranking-tab:hover {
+            background: rgba(46,204,113,0.2);
+            border-color: #2ECC71;
+        }
+        .ranking-tab.active {
+            background: linear-gradient(135deg, rgba(46,204,113,0.4), rgba(39,174,96,0.4));
+            border-color: #2ECC71;
+            color: #fff;
+        }
+        
+        /* 段位变化标签 */
+        .rank-change {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .rank-up {
+            background: rgba(46,204,113,0.3);
+            color: #2ECC71;
+        }
+        .rank-down {
+            background: rgba(231,76,60,0.3);
+            color: #E74C3C;
+        }
+        .rank-same {
+            background: rgba(255,255,255,0.1);
+            color: #999;
+        }
         
         @media (max-width: 1400px) {
             .stats-grid { grid-template-columns: repeat(3, 1fr); }
@@ -422,21 +525,90 @@
         </div>
     </div>
     
+    <!-- 积分兑换率 -->
+    <div class="charts-row">
+        <div class="chart-card">
+            <div class="chart-title">积分兑换率</div>
+            <div class="exchange-stats">
+                <div class="exchange-item">
+                    <span class="exchange-label">总积分</span>
+                    <span class="exchange-value" id="totalPoints">-</span>
+                </div>
+                <div class="exchange-item">
+                    <span class="exchange-label">已兑换积分</span>
+                    <span class="exchange-value" id="exchangedPoints">-</span>
+                </div>
+                <div class="exchange-item highlight">
+                    <span class="exchange-label">兑换率</span>
+                    <span class="exchange-value" id="exchangeRate">-</span>
+                </div>
+                <div class="exchange-item">
+                    <span class="exchange-label">兑换次数</span>
+                    <span class="exchange-value" id="exchangeCount">-</span>
+                </div>
+                <div class="exchange-item">
+                    <span class="exchange-label">平均兑换</span>
+                    <span class="exchange-value" id="avgExchange">-</span>
+                </div>
+            </div>
+            <div class="chart-container" id="exchangeChart" style="height: 250px;"></div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title">热门兑换商品</div>
+            <div class="chart-container" id="exchangeItemsChart"></div>
+        </div>
+    </div>
+    
+    <!-- 玩家排名 -->
+    <div class="table-section">
+        <div class="chart-title">玩家排名</div>
+        <div class="ranking-tabs">
+            <button class="ranking-tab active" onclick="switchRankingPeriod('daily')">日榜</button>
+            <button class="ranking-tab" onclick="switchRankingPeriod('weekly')">周榜</button>
+            <button class="ranking-tab" onclick="switchRankingPeriod('monthly')">月榜</button>
+            <button class="ranking-tab" onclick="switchRankingPeriod('quarterly')">季度榜</button>
+            <button class="ranking-tab" onclick="switchRankingPeriod('yearly')">年榜</button>
+            <button class="ranking-tab" onclick="switchRankingPeriod('all')">全部</button>
+        </div>
+        <div class="table-scroll">
+            <table id="rankingTable">
+                <thead>
+                    <tr>
+                        <th>排名</th>
+                        <th>用户</th>
+                        <th class="sortable" data-sort="games" onclick="sortRankingTable('games')">场次</th>
+                        <th class="sortable" data-sort="score" onclick="sortRankingTable('score')">积分</th>
+                        <th class="sortable" data-sort="winRate" onclick="sortRankingTable('winRate')">胜率</th>
+                        <th class="sortable" data-sort="streak" onclick="sortRankingTable('streak')">连胜</th>
+                        <th class="sortable" data-sort="rankChange" onclick="sortRankingTable('rankChange')">段位变化</th>
+                        <th class="sortable" data-sort="breakClears" onclick="sortRankingTable('breakClears')">炸清</th>
+                        <th class="sortable" data-sort="runClears" onclick="sortRankingTable('runClears')">接清</th>
+                        <th class="sortable" data-sort="bigGold" onclick="sortRankingTable('bigGold')">大金</th>
+                        <th class="sortable" data-sort="smallGold" onclick="sortRankingTable('smallGold')">小金</th>
+                        <th class="sortable" data-sort="doubleMatchPointWinRate" onclick="sortRankingTable('doubleMatchPointWinRate')">双赛点胜率</th>
+                    </tr>
+                </thead>
+                <tbody id="rankingBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
     <!-- 活跃用户Top20 -->
     <div class="table-section">
         <div class="chart-title">活跃用户 Top20</div>
         <div class="table-scroll">
-            <table>
+            <table id="topUsersTableElement">
                 <thead>
                     <tr>
                         <th>排名</th>
                         <th>用户ID</th>
                         <th>昵称</th>
                         <th>段位</th>
-                        <th>积分</th>
-                        <th>场次</th>
-                        <th>胜率</th>
-                        <th>连胜</th>
+                        <th class="sortable" data-sort="score" onclick="sortTopUsersTable('score')">积分</th>
+                        <th class="sortable" data-sort="games" onclick="sortTopUsersTable('games')">场次</th>
+                        <th class="sortable" data-sort="winRate" onclick="sortTopUsersTable('winRate')">胜率</th>
+                        <th class="sortable" data-sort="streak" onclick="sortTopUsersTable('streak')">连胜</th>
                         <th>分层</th>
                     </tr>
                 </thead>
@@ -449,16 +621,16 @@
     <div class="table-section">
         <div class="chart-title">用户明细</div>
         <div class="table-scroll">
-            <table>
+            <table id="userDetailTableElement">
                 <thead>
                     <tr>
                         <th>用户ID</th>
                         <th>昵称</th>
                         <th>段位</th>
-                        <th>积分</th>
-                        <th>场次</th>
-                        <th>胜率</th>
-                        <th>连胜</th>
+                        <th class="sortable" data-sort="score" onclick="sortUserDetailTable('score')">积分</th>
+                        <th class="sortable" data-sort="games" onclick="sortUserDetailTable('games')">场次</th>
+                        <th class="sortable" data-sort="winRate" onclick="sortUserDetailTable('winRate')">胜率</th>
+                        <th class="sortable" data-sort="streak" onclick="sortUserDetailTable('streak')">连胜</th>
                         <th>分层</th>
                     </tr>
                 </thead>
@@ -535,6 +707,12 @@
             
             // 初始化图表
             initCharts(venueUsers);
+            
+            // 渲染积分兑换率
+            renderPointsExchange();
+            
+            // 渲染玩家排名
+            renderPlayerRankings();
             
             // 更新数据
             updateDashboard(venueUsers);
@@ -767,10 +945,11 @@
                 {name: "抢7", value: 180000, desc: "先赢7局"},
                 {name: "抢9", value: 350000, desc: "17局9胜"},
                 {name: "抢11", value: 125000, desc: "先赢11局"},
-                {name: "抢13", value: 45000, desc: "先赢13局"}
+                {name: "抢13", value: 45000, desc: "先赢13局"},
+                {name: "其它", value: 35000, desc: "其他赛制"}
             ];
             
-            const modeColors = ['#2ECC71', '#3498DB', '#E74C3C', '#F39C12', '#9B59B6'];
+            const modeColors = ['#2ECC71', '#3498DB', '#E74C3C', '#F39C12', '#9B59B6', '#95A5A6'];
             
             echarts.init(document.getElementById('matchModeChart')).setOption({
                 tooltip: { 
@@ -857,6 +1036,301 @@
             });
         }
         
+        // 渲染积分兑换率
+        function renderPointsExchange() {
+            if (!demoData.pointsExchange) return;
+            
+            const pe = demoData.pointsExchange;
+            document.getElementById('totalPoints').textContent = pe.totalPoints.toLocaleString();
+            document.getElementById('exchangedPoints').textContent = pe.exchangedPoints.toLocaleString();
+            document.getElementById('exchangeRate').textContent = pe.exchangeRate + '%';
+            document.getElementById('exchangeCount').textContent = pe.exchangeCount.toLocaleString();
+            document.getElementById('avgExchange').textContent = pe.avgExchangeAmount;
+            
+            // 兑换率仪表盘
+            echarts.init(document.getElementById('exchangeChart')).setOption({
+                series: [{
+                    type: 'gauge',
+                    startAngle: 200,
+                    endAngle: -20,
+                    min: 0,
+                    max: 100,
+                    splitNumber: 10,
+                    itemStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                            { offset: 0, color: '#FF6B6B' },
+                            { offset: 0.5, color: '#FFE66D' },
+                            { offset: 1, color: '#2ECC71' }
+                        ])
+                    },
+                    progress: { show: true, width: 20 },
+                    pointer: { show: false },
+                    axisLine: { lineStyle: { width: 20, color: [[1, 'rgba(255,255,255,0.1)']] } },
+                    axisTick: { show: false },
+                    splitLine: { show: false },
+                    axisLabel: { show: false },
+                    anchor: { show: false },
+                    title: { show: false },
+                    detail: {
+                        valueAnimation: true,
+                        fontSize: 36,
+                        fontWeight: 'bold',
+                        offsetCenter: [0, 0],
+                        color: '#2ECC71',
+                        formatter: '{value}%'
+                    },
+                    data: [{ value: pe.exchangeRate }]
+                }]
+            });
+            
+            // 热门兑换商品
+            echarts.init(document.getElementById('exchangeItemsChart')).setOption({
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: { type: 'shadow' },
+                    textStyle: { fontSize: 13 }
+                },
+                grid: { top: 20, right: 30, bottom: 30, left: 80 },
+                xAxis: {
+                    type: 'value',
+                    axisLabel: { color: '#aaa' },
+                    splitLine: { lineStyle: { color: '#333' } }
+                },
+                yAxis: {
+                    type: 'category',
+                    data: pe.topExchangeItems.map(i => i.name).reverse(),
+                    axisLabel: { color: '#ccc', fontSize: 13 }
+                },
+                series: [{
+                    type: 'bar',
+                    data: pe.topExchangeItems.map(i => ({
+                        value: i.count,
+                        itemStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                                { offset: 0, color: '#2ECC71' },
+                                { offset: 1, color: '#27AE60' }
+                            ])
+                        }
+                    })).reverse(),
+                    barWidth: 20,
+                    label: {
+                        show: true,
+                        position: 'right',
+                        color: '#fff',
+                        fontSize: 12
+                    }
+                }]
+            });
+        }
+        
+        // 当前选中的排名周期
+        let currentRankingPeriod = 'daily';
+        
+        // 排序状态
+        let rankingSortField = null;
+        let rankingSortOrder = 'desc'; // desc降序, asc升序
+        
+        // 切换排名周期
+        function switchRankingPeriod(period) {
+            currentRankingPeriod = period;
+            
+            // 重置排序
+            rankingSortField = null;
+            rankingSortOrder = 'desc';
+            document.querySelectorAll('#rankingTable th.sortable').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+            });
+            
+            // 更新标签样式
+            document.querySelectorAll('.ranking-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // 渲染排名表格
+            renderPlayerRankings();
+        }
+        
+        // 排序玩家排名表格
+        function sortRankingTable(field) {
+            const headers = document.querySelectorAll('#rankingTable th.sortable');
+            
+            // 切换排序方向
+            if (rankingSortField === field) {
+                rankingSortOrder = rankingSortOrder === 'desc' ? 'asc' : 'desc';
+            } else {
+                rankingSortField = field;
+                rankingSortOrder = 'desc';
+            }
+            
+            // 更新表头样式
+            headers.forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+                if (th.dataset.sort === field) {
+                    th.classList.add(rankingSortOrder === 'desc' ? 'sort-desc' : 'sort-asc');
+                }
+            });
+            
+            // 重新渲染
+            renderPlayerRankings();
+        }
+        
+        // 渲染玩家排名
+        function renderPlayerRankings() {
+            if (!demoData.playerRankings || !demoData.playerRankings[currentRankingPeriod]) return;
+            
+            let rankings = [...demoData.playerRankings[currentRankingPeriod]];
+            
+            // 排序
+            if (rankingSortField) {
+                rankings.sort((a, b) => {
+                    let aVal = a[rankingSortField];
+                    let bVal = b[rankingSortField];
+                    
+                    // 处理百分比字段（去掉%号）
+                    if (typeof aVal === 'string' && aVal.includes('%')) {
+                        aVal = parseFloat(aVal);
+                        bVal = parseFloat(bVal);
+                    }
+                    
+                    if (rankingSortOrder === 'desc') {
+                        return bVal - aVal;
+                    } else {
+                        return aVal - bVal;
+                    }
+                });
+            }
+            
+            const tbody = document.getElementById('rankingBody');
+            
+            tbody.innerHTML = rankings.map((u, i) => `
+                <tr>
+                    <td><b>${i + 1}</b></td>
+                    <td>${u.name}</td>
+                    <td>${u.games}</td>
+                    <td><b>${u.score}</b></td>
+                    <td>${u.winRate}%</td>
+                    <td>${u.streak}</td>
+                    <td><span class="rank-change ${u.rankChange > 0 ? 'rank-up' : u.rankChange < 0 ? 'rank-down' : 'rank-same'}">
+                        ${u.rankChange > 0 ? '↑' + u.rankChange : u.rankChange < 0 ? '↓' + Math.abs(u.rankChange) : '-'}
+                    </span></td>
+                    <td>${u.breakClears}</td>
+                    <td>${u.runClears}</td>
+                    <td>${u.bigGold}</td>
+                    <td>${u.smallGold}</td>
+                    <td>${u.doubleMatchPointWinRate}%</td>
+                </tr>
+            `).join('');
+        }
+        
+        // 活跃用户Top20排序状态
+        let topUsersSortField = null;
+        let topUsersSortOrder = 'desc';
+        let venueUsersData = [];
+        
+        // 排序活跃用户Top20表格
+        function sortTopUsersTable(field) {
+            const headers = document.querySelectorAll('#topUsersTableElement th.sortable');
+            
+            if (topUsersSortField === field) {
+                topUsersSortOrder = topUsersSortOrder === 'desc' ? 'asc' : 'desc';
+            } else {
+                topUsersSortField = field;
+                topUsersSortOrder = 'desc';
+            }
+            
+            headers.forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+                if (th.dataset.sort === field) {
+                    th.classList.add(topUsersSortOrder === 'desc' ? 'sort-desc' : 'sort-asc');
+                }
+            });
+            
+            renderTopUsersTable();
+        }
+        
+        // 渲染活跃用户Top20表格
+        function renderTopUsersTable() {
+            let topUsers = [...venueUsersData];
+            
+            if (topUsersSortField) {
+                topUsers.sort((a, b) => {
+                    let aVal = a[topUsersSortField];
+                    let bVal = b[topUsersSortField];
+                    return topUsersSortOrder === 'desc' ? bVal - aVal : aVal - bVal;
+                });
+            } else {
+                topUsers.sort((a, b) => (b.games * 0.5 + b.winRate) - (a.games * 0.5 + a.winRate));
+            }
+            
+            topUsers = topUsers.slice(0, 20);
+            
+            document.getElementById('topUsersTable').innerHTML = topUsers.map((u, i) => `
+                <tr>
+                    <td><b>${i + 1}</b></td>
+                    <td>${u.id}</td>
+                    <td>${u.name}</td>
+                    <td><span class="rank-tag ${getRankClass(u.rank)}">${u.rank}</span></td>
+                    <td><b>${u.score}</b></td>
+                    <td>${u.games}</td>
+                    <td>${u.winRate}%</td>
+                    <td>${u.streak || 0}</td>
+                    <td><span class="segment-tag ${getSegmentClass(u.segment)}">${u.segment}</span></td>
+                </tr>
+            `).join('');
+        }
+        
+        // 用户明细排序状态
+        let userDetailSortField = null;
+        let userDetailSortOrder = 'desc';
+        
+        // 排序用户明细表格
+        function sortUserDetailTable(field) {
+            const headers = document.querySelectorAll('#userDetailTableElement th.sortable');
+            
+            if (userDetailSortField === field) {
+                userDetailSortOrder = userDetailSortOrder === 'desc' ? 'asc' : 'desc';
+            } else {
+                userDetailSortField = field;
+                userDetailSortOrder = 'desc';
+            }
+            
+            headers.forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+                if (th.dataset.sort === field) {
+                    th.classList.add(userDetailSortOrder === 'desc' ? 'sort-desc' : 'sort-asc');
+                }
+            });
+            
+            renderUserDetailTable();
+        }
+        
+        // 渲染用户明细表格
+        function renderUserDetailTable() {
+            let users = [...venueUsersData];
+            
+            if (userDetailSortField) {
+                users.sort((a, b) => {
+                    let aVal = a[userDetailSortField];
+                    let bVal = b[userDetailSortField];
+                    return userDetailSortOrder === 'desc' ? bVal - aVal : aVal - bVal;
+                });
+            }
+            
+            document.getElementById('userDetailTable').innerHTML = users.map(u => `
+                <tr>
+                    <td>${u.id}</td>
+                    <td>${u.name}</td>
+                    <td><span class="rank-tag ${getRankClass(u.rank)}">${u.rank}</span></td>
+                    <td>${u.score}</td>
+                    <td>${u.games}</td>
+                    <td>${u.winRate}%</td>
+                    <td>${u.streak || 0}</td>
+                    <td><span class="segment-tag ${getSegmentClass(u.segment)}">${u.segment}</span></td>
+                </tr>
+            `).join('');
+        }
+        
         function updateDashboard(users) {
             const total = users.length;
             
@@ -895,35 +1369,14 @@
             document.getElementById('segNormalCount').textContent = segCounts['普通用户'] || 0;
             document.getElementById('segNormalPercent').textContent = total > 0 ? ((segCounts['普通用户'] || 0) / total * 100).toFixed(1) + '%' : '0%';
             
-            // 活跃用户Top20
-            const topUsers = users.sort((a, b) => (b.games * 0.5 + b.winRate) - (a.games * 0.5 + a.winRate)).slice(0, 20);
-            document.getElementById('topUsersTable').innerHTML = topUsers.map((u, i) => `
-                <tr>
-                    <td><b>${i + 1}</b></td>
-                    <td>${u.id}</td>
-                    <td>${u.name}</td>
-                    <td><span class="rank-tag ${getRankClass(u.rank)}">${u.rank}</span></td>
-                    <td><b>${u.score}</b></td>
-                    <td>${u.games}</td>
-                    <td>${u.winRate}%</td>
-                    <td>${u.streak || 0}</td>
-                    <td><span class="segment-tag ${getSegmentClass(u.segment)}">${u.segment}</span></td>
-                </tr>
-            `).join('');
+            // 保存用户数据供排序使用
+            venueUsersData = users;
             
-            // 用户明细
-            document.getElementById('userDetailTable').innerHTML = users.map(u => `
-                <tr>
-                    <td>${u.id}</td>
-                    <td>${u.name}</td>
-                    <td><span class="rank-tag ${getRankClass(u.rank)}">${u.rank}</span></td>
-                    <td>${u.score}</td>
-                    <td>${u.games}</td>
-                    <td>${u.winRate}%</td>
-                    <td>${u.streak || 0}</td>
-                    <td><span class="segment-tag ${getSegmentClass(u.segment)}">${u.segment}</span></td>
-                </tr>
-            `).join('');
+            // 渲染活跃用户Top20
+            renderTopUsersTable();
+            
+            // 渲染用户明细
+            renderUserDetailTable();
             
             // 积分流水表格（模拟数据）
             renderPointsFlow(users);
@@ -1112,7 +1565,7 @@
         
         // 窗口resize
         window.addEventListener('resize', () => {
-            ['rankChart', 'segmentChart', 'dailyTrendChart', 'weeklyTrendChart', 'venueRankChart', 'matchModeChart', 'matchModePieChart'].forEach(id => {
+            ['rankChart', 'segmentChart', 'dailyTrendChart', 'weeklyTrendChart', 'venueRankChart', 'matchModeChart', 'matchModePieChart', 'exchangeChart', 'exchangeItemsChart'].forEach(id => {
                 const chart = echarts.getInstanceByDom(document.getElementById(id));
                 chart && chart.resize();
             });

@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>球房数据看板</title>
+    <script src="https://unpkg.com/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: #fff; padding: 20px; min-height: 100vh; }
+        
+        .header { background: linear-gradient(90deg, #2ECC71 0%, #27AE60 100%); border-radius: 15px; padding: 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 26px; }
+        .header-info { text-align: right; }
+        .header-info p { opacity: 0.9; font-size: 14px; }
+        .venue-name { font-size: 18px; color: #FFD700; margin-top: 5px; }
+        
+        /* 筛选栏 */
+        .filter-bar { background: rgba(255,255,255,0.1); border-radius: 10px; padding: 15px 20px; margin-bottom: 20px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+        .filter-bar label { color: #aaa; font-size: 14px; }
+        .filter-bar select { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+        .filter-bar select option { background: #1a1a2e; }
+        
+        /* 统计卡片 */
+        .stats-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; text-align: center; }
+        .stat-card .value { font-size: 32px; font-weight: bold; color: #2ECC71; }
+        .stat-card .label { color: #aaa; margin-top: 5px; font-size: 13px; }
+        .stat-card.highlight { background: linear-gradient(135deg, rgba(46,204,113,0.3), rgba(39,174,96,0.3)); border: 1px solid #2ECC71; }
+        .stat-card.highlight .value { color: #FFD700; }
+        
+        /* 图表区域 */
+        .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .chart-card { background: rgba(255,255,255,0.1); border-radius: 15px; padding: 20px; }
+        .chart-title { font-size: 16px; margin-bottom: 15px; padding-left: 10px; border-left: 3px solid #2ECC71; }
+        .chart-container { height: 280px; }
+        
+        /* 表格 */
+        .table-section { background: rgba(255,255,255,0.1); border-radius: 15px; padding: 20px; margin-bottom: 20px; }
+        .table-scroll { max-height: 350px; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: rgba(46,204,113,0.3); padding: 12px; text-align: left; font-size: 13px; }
+        td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 13px; }
+        tr:hover { background: rgba(255,255,255,0.05); }
+        
+        /* 段位标签 */
+        .rank-tag { padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: bold; }
+        .rank-king { background: linear-gradient(135deg, #FFD700, #FFA500); color: #000; }
+        .rank-diamond { background: linear-gradient(135deg, #00CED1, #20B2AA); color: #000; }
+        .rank-platinum { background: linear-gradient(135deg, #E6E6FA, #B0C4DE); color: #000; }
+        .rank-gold { background: linear-gradient(135deg, #FFD700, #DAA520); color: #000; }
+        .rank-silver { background: linear-gradient(135deg, #C0C0C0, #A9A9A9); color: #000; }
+        .rank-bronze { background: linear-gradient(135deg, #CD7F32, #8B4513); color: #fff; }
+        
+        /* 分层标签 */
+        .segment-tag { padding: 2px 8px; border-radius: 3px; font-size: 11px; }
+        .seg-vip { background: #FFD700; color: #000; }
+        .seg-active { background: #00C853; color: #fff; }
+        .seg-potential { background: #2196F3; color: #fff; }
+        .seg-risk { background: #FF9800; color: #fff; }
+        .seg-normal { background: #9E9E9E; color: #fff; }
+        
+        /* 分层卡片 */
+        .segment-cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 15px; }
+        .seg-card { background: rgba(255,255,255,0.1); border-radius: 10px; padding: 15px; text-align: center; border-left: 4px solid; }
+        .seg-card.vip { border-color: #FFD700; }
+        .seg-card.active { border-color: #00C853; }
+        .seg-card.potential { border-color: #2196F3; }
+        .seg-card.risk { border-color: #FF9800; }
+        .seg-card.normal { border-color: #9E9E9E; }
+        .seg-card .count { font-size: 24px; font-weight: bold; color: #2ECC71; }
+        .seg-card .name { font-size: 12px; color: #aaa; margin-top: 5px; }
+        .seg-card .percent { font-size: 11px; color: #666; }
+        
+        /* 排名高亮 */
+        .rank-highlight { color: #FFD700; font-weight: bold; }
+        
+        @media (max-width: 1200px) {
+            .stats-grid { grid-template-columns: repeat(3, 1fr); }
+            .charts-row { grid-template-columns: 1fr; }
+            .segment-cards { grid-template-columns: repeat(3, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>球房数据看板</h1>
+            <div class="venue-name" id="venueNameDisplay">乔氏台球俱乐部</div>
+        </div>
+        <div class="header-info">
+            <p>数据时间：2026年3月</p>
+            <p id="updateTime">更新时间：--</p>
+        </div>
+    </div>
+    
+    <!-- 筛选栏 -->
+    <div class="filter-bar">
+        <div>
+            <label>段位：</label>
+            <select id="rankFilter" onchange="filterData()">
+                <option value="">全部段位</option>
+                <option value="最强杆王">最强杆王</option>
+                <option value="校球钻石">校球钻石</option>
+                <option value="加塞铂金">加塞铂金</option>
+                <option value="走位黄金">走位黄金</option>
+                <option value="翻袋白银">翻袋白银</option>
+                <option value="清台青铜">清台青铜</option>
+            </select>
+        </div>
+    </div>
+    
+    <!-- 核心指标 -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="value" id="totalUsers">--</div>
+            <div class="label">本店用户数</div>
+        </div>
+        <div class="stat-card">
+            <div class="value" id="activeUsers">--</div>
+            <div class="label">本店月活跃</div>
+        </div>
+        <div class="stat-card">
+            <div class="value" id="totalGames">--</div>
+            <div class="label">本店总场次</div>
+        </div>
+        <div class="stat-card">
+            <div class="value" id="avgWinRate">--</div>
+            <div class="label">本店平均胜率</div>
+        </div>
+        <div class="stat-card">
+            <div class="value" id="maxStreak">--</div>
+            <div class="label">本店最高连胜</div>
+        </div>
+        <div class="stat-card highlight">
+            <div class="value" id="regionRank">--</div>
+            <div class="label">区域排名</div>
+        </div>
+    </div>
+    
+    <!-- 段位分布 + 用户分层 -->
+    <div class="charts-row">
+        <div class="chart-card">
+            <div class="chart-title">本店段位分布</div>
+            <div class="chart-container" id="rankChart"></div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title">用户分层</div>
+            <div>
+                <div class="segment-cards">
+                    <div class="seg-card vip">
+                        <div class="count" id="segVipCount">--</div>
+                        <div class="name">核心用户</div>
+                        <div class="percent" id="segVipPercent">--</div>
+                    </div>
+                    <div class="seg-card active">
+                        <div class="count" id="segActiveCount">--</div>
+                        <div class="name">活跃用户</div>
+                        <div class="percent" id="segActivePercent">--</div>
+                    </div>
+                    <div class="seg-card potential">
+                        <div class="count" id="segPotentialCount">--</div>
+                        <div class="name">潜力用户</div>
+                        <div class="percent" id="segPotentialPercent">--</div>
+                    </div>
+                    <div class="seg-card risk">
+                        <div class="count" id="segRiskCount">--</div>
+                        <div class="name">流失风险</div>
+                        <div class="percent" id="segRiskPercent">--</div>
+                    </div>
+                    <div class="seg-card normal">
+                        <div class="count" id="segNormalCount">--</div>
+                        <div class="name">普通用户</div>
+                        <div class="percent" id="segNormalPercent">--</div>
+                    </div>
+                </div>
+                <div class="chart-container" id="segmentChart" style="height: 180px;"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 趋势图 -->
+    <div class="charts-row">
+        <div class="chart-card">
+            <div class="chart-title">每日趋势（近30天）</div>
+            <div class="chart-container" id="dailyTrendChart"></div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title">每周趋势（近12周）</div>
+            <div class="chart-container" id="weeklyTrendChart"></div>
+        </div>
+    </div>
+    
+    <!-- 周边球馆排名 -->
+    <div class="charts-row">
+        <div class="chart-card" style="grid-column: span 2;">
+            <div class="chart-title">周边球馆活跃度排名</div>
+            <div class="chart-container" id="venueRankChart"></div>
+        </div>
+    </div>
+    
+    <!-- 活跃用户Top20 -->
+    <div class="table-section">
+        <div class="chart-title">活跃用户 Top20</div>
+        <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th>排名</th>
+                        <th>用户ID</th>
+                        <th>昵称</th>
+                        <th>段位</th>
+                        <th>积分</th>
+                        <th>场次</th>
+                        <th>胜率</th>
+                        <th>连胜</th>
+                        <th>分层</th>
+                    </tr>
+                </thead>
+                <tbody id="topUsersTable"></tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- 用户明细 -->
+    <div class="table-section">
+        <div class="chart-title">用户明细</div>
+        <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th>用户ID</th>
+                        <th>昵称</th>
+                        <th>段位</th>
+                        <th>积分</th>
+                        <th>场次</th>
+                        <th>胜率</th>
+                        <th>连胜</th>
+                        <th>分层</th>
+                    </tr>
+                </thead>
+                <tbody id="userDetailTable"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 加载数据 -->
+    <script src="demo_data.js"></script>
+    <script>
+        // 当前球馆（实际使用时从登录信息获取）
+        const currentVenue = "乔氏台球俱乐部";
+        
+        // 初始化
+        function init() {
+            document.getElementById('updateTime').textContent = '更新时间: ' + new Date().toLocaleString();
+            document.getElementById('venueNameDisplay').textContent = currentVenue;
+            
+            // 筛选本店数据
+            const venueUsers = demoData.allUsers.filter(u => u.venue === currentVenue);
+            
+            // 初始化图表
+            initCharts(venueUsers);
+            
+            // 更新数据
+            updateDashboard(venueUsers);
+        }
+        
+        function initCharts(venueUsers) {
+            // 段位分布
+            const rankCounts = {};
+            venueUsers.forEach(u => {
+                let key;
+                if (u.rank.includes('杆王')) key = '最强杆王';
+                else if (u.rank.includes('钻石')) key = '校球钻石';
+                else if (u.rank.includes('铂金')) key = '加塞铂金';
+                else if (u.rank.includes('黄金')) key = '走位黄金';
+                else if (u.rank.includes('白银')) key = '翻袋白银';
+                else key = '清台青铜';
+                rankCounts[key] = (rankCounts[key] || 0) + 1;
+            });
+            
+            const rankDist = Object.entries(rankCounts).map(([name, value]) => ({
+                name, value,
+                color: {'最强杆王':'#FFD700','校球钻石':'#00CED1','加塞铂金':'#E6E6FA','走位黄金':'#FFD700','翻袋白银':'#C0C0C0','清台青铜':'#CD853F'}[name]
+            }));
+            
+            echarts.init(document.getElementById('rankChart')).setOption({
+                tooltip: { trigger: 'item', formatter: '{b}: {c}人 ({d}%)' },
+                legend: { bottom: '5%', textStyle: { color: '#fff', fontSize: 11 } },
+                series: [{
+                    type: 'pie',
+                    radius: ['40%', '65%'],
+                    center: ['50%', '45%'],
+                    data: rankDist,
+                    label: { show: true, formatter: '{b}\n{c}', fontSize: 11 },
+                    itemStyle: { borderRadius: 5 }
+                }],
+                color: ['#CD7F32', '#C0C0C0', '#FFD700', '#00CED1', '#E6E6FA', '#FFD700']
+            });
+            
+            // 用户分层饼图
+            const segCounts = {};
+            venueUsers.forEach(u => {
+                segCounts[u.segment] = (segCounts[u.segment] || 0) + 1;
+            });
+            const segments = ['核心用户', '活跃用户', '潜力用户', '流失风险', '普通用户'].map(name => ({
+                name, value: segCounts[name] || 0,
+                color: {'核心用户':'#FFD700','活跃用户':'#00C853','潜力用户':'#2196F3','流失风险':'#FF9800','普通用户':'#9E9E9E'}[name]
+            }));
+            
+            echarts.init(document.getElementById('segmentChart')).setOption({
+                tooltip: { trigger: 'item', formatter: '{b}: {c}人 ({d}%)' },
+                series: [{
+                    type: 'pie',
+                    radius: ['30%', '55%'],
+                    data: segments,
+                    label: { show: true, formatter: '{d}%', fontSize: 10 }
+                }]
+            });
+            
+            // 每日趋势
+            echarts.init(document.getElementById('dailyTrendChart')).setOption({
+                tooltip: { trigger: 'axis' },
+                legend: { data: ['活跃用户', '场次'], textStyle: { color: '#aaa', fontSize: 11 }, top: 0 },
+                xAxis: { type: 'category', data: demoData.dailyTrend.map(d => d[0]), axisLabel: { fontSize: 9, rotate: 45 } },
+                yAxis: { type: 'value' },
+                series: [
+                    { name: '活跃用户', type: 'line', data: demoData.dailyTrend.map(d => Math.round(d[1] * 0.15)), smooth: true, itemStyle: { color: '#2ECC71' } },
+                    { name: '场次', type: 'line', data: demoData.dailyTrend.map(d => Math.round(d[3] * 0.15)), smooth: true, itemStyle: { color: '#F39C12' } }
+                ]
+            });
+            
+            // 每周趋势
+            echarts.init(document.getElementById('weeklyTrendChart')).setOption({
+                tooltip: { trigger: 'axis' },
+                legend: { data: ['场次', '活跃用户'], textStyle: { color: '#aaa', fontSize: 11 }, top: 0 },
+                xAxis: { type: 'category', data: demoData.weeklyTrend.map(d => d[0]), axisLabel: { fontSize: 10 } },
+                yAxis: { type: 'value' },
+                series: [
+                    { name: '场次', type: 'bar', data: demoData.weeklyTrend.map(d => Math.round(d[2] * 0.15)), itemStyle: { color: '#2ECC71' } },
+                    { name: '活跃用户', type: 'line', data: demoData.weeklyTrend.map(d => Math.round(d[3] * 0.15)), smooth: true, itemStyle: { color: '#F39C12' } }
+                ]
+            });
+            
+            // 周边球馆排名
+            const allVenues = demoData.venues.map((v, i) => ({
+                name: v[0],
+                value: v[1],
+                isCurrent: v[0].includes(currentVenue.substring(0, 4))
+            }));
+            
+            echarts.init(document.getElementById('venueRankChart')).setOption({
+                tooltip: { trigger: 'axis' },
+                xAxis: { type: 'value' },
+                yAxis: { type: 'category', data: allVenues.map(v => v.name.substring(0, 10)).reverse(), axisLabel: { fontSize: 10 } },
+                series: [{
+                    type: 'bar',
+                    data: allVenues.map(v => ({
+                        value: v.value,
+                        itemStyle: { color: v.isCurrent ? '#FFD700' : '#2ECC71' }
+                    })).reverse(),
+                    label: {
+                        show: true,
+                        position: 'right',
+                        formatter: function(params) {
+                            return params.dataIndex === 4 ? '本店' : '';
+                        },
+                        color: '#FFD700',
+                        fontWeight: 'bold'
+                    }
+                }]
+            });
+        }
+        
+        function updateDashboard(users) {
+            const total = users.length;
+            
+            // 计算统计数据
+            const stats = {
+                totalUsers: total,
+                activeUsers: users.filter(u => u.segment === '核心用户' || u.segment === '活跃用户').length,
+                totalGames: users.reduce((sum, u) => sum + u.games, 0),
+                avgWinRate: total > 0 ? (users.reduce((sum, u) => sum + u.winRate, 0) / total).toFixed(1) : 0,
+                maxStreak: users.length > 0 ? Math.max(...users.map(u => u.streak || 0)) : 0,
+                regionRank: Math.floor(Math.random() * 10) + 1 // 模拟排名
+            };
+            
+            // 更新指标卡片
+            document.getElementById('totalUsers').textContent = stats.totalUsers.toLocaleString();
+            document.getElementById('activeUsers').textContent = stats.activeUsers.toLocaleString();
+            document.getElementById('totalGames').textContent = stats.totalGames >= 1000 ? (stats.totalGames / 1000).toFixed(1) + 'K' : stats.totalGames;
+            document.getElementById('avgWinRate').textContent = stats.avgWinRate + '%';
+            document.getElementById('maxStreak').textContent = stats.maxStreak;
+            document.getElementById('regionRank').textContent = '第' + stats.regionRank + '名';
+            
+            // 用户分层
+            const segCounts = {};
+            users.forEach(u => {
+                segCounts[u.segment] = (segCounts[u.segment] || 0) + 1;
+            });
+            
+            document.getElementById('segVipCount').textContent = segCounts['核心用户'] || 0;
+            document.getElementById('segVipPercent').textContent = total > 0 ? ((segCounts['核心用户'] || 0) / total * 100).toFixed(1) + '%' : '0%';
+            document.getElementById('segActiveCount').textContent = segCounts['活跃用户'] || 0;
+            document.getElementById('segActivePercent').textContent = total > 0 ? ((segCounts['活跃用户'] || 0) / total * 100).toFixed(1) + '%' : '0%';
+            document.getElementById('segPotentialCount').textContent = segCounts['潜力用户'] || 0;
+            document.getElementById('segPotentialPercent').textContent = total > 0 ? ((segCounts['潜力用户'] || 0) / total * 100).toFixed(1) + '%' : '0%';
+            document.getElementById('segRiskCount').textContent = segCounts['流失风险'] || 0;
+            document.getElementById('segRiskPercent').textContent = total > 0 ? ((segCounts['流失风险'] || 0) / total * 100).toFixed(1) + '%' : '0%';
+            document.getElementById('segNormalCount').textContent = segCounts['普通用户'] || 0;
+            document.getElementById('segNormalPercent').textContent = total > 0 ? ((segCounts['普通用户'] || 0) / total * 100).toFixed(1) + '%' : '0%';
+            
+            // 活跃用户Top20
+            const topUsers = users.sort((a, b) => (b.games * 0.5 + b.winRate) - (a.games * 0.5 + a.winRate)).slice(0, 20);
+            document.getElementById('topUsersTable').innerHTML = topUsers.map((u, i) => `
+                <tr>
+                    <td><b>${i + 1}</b></td>
+                    <td>${u.id}</td>
+                    <td>${u.name}</td>
+                    <td><span class="rank-tag ${getRankClass(u.rank)}">${u.rank}</span></td>
+                    <td><b>${u.score}</b></td>
+                    <td>${u.games}</td>
+                    <td>${u.winRate}%</td>
+                    <td>${u.streak || 0}</td>
+                    <td><span class="segment-tag ${getSegmentClass(u.segment)}">${u.segment}</span></td>
+                </tr>
+            `).join('');
+            
+            // 用户明细
+            document.getElementById('userDetailTable').innerHTML = users.map(u => `
+                <tr>
+                    <td>${u.id}</td>
+                    <td>${u.name}</td>
+                    <td><span class="rank-tag ${getRankClass(u.rank)}">${u.rank}</span></td>
+                    <td>${u.score}</td>
+                    <td>${u.games}</td>
+                    <td>${u.winRate}%</td>
+                    <td>${u.streak || 0}</td>
+                    <td><span class="segment-tag ${getSegmentClass(u.segment)}">${u.segment}</span></td>
+                </tr>
+            `).join('');
+        }
+        
+        function filterData() {
+            const rankTier = document.getElementById('rankFilter').value;
+            
+            let filteredUsers = demoData.allUsers.filter(u => {
+                if (u.venue !== currentVenue) return false;
+                if (rankTier && !u.rank.includes(rankTier.replace('最强杆王', '杆王').replace('校球钻石', '钻石').replace('加塞铂金', '铂金').replace('走位黄金', '黄金').replace('翻袋白银', '白银').replace('清台青铜', '青铜'))) return false;
+                return true;
+            });
+            
+            updateDashboard(filteredUsers);
+        }
+        
+        function getRankClass(rank) {
+            if (rank.includes('杆王')) return 'rank-king';
+            if (rank.includes('钻石')) return 'rank-diamond';
+            if (rank.includes('铂金')) return 'rank-platinum';
+            if (rank.includes('黄金')) return 'rank-gold';
+            if (rank.includes('白银')) return 'rank-silver';
+            return 'rank-bronze';
+        }
+        
+        function getSegmentClass(segment) {
+            if (segment === '核心用户') return 'seg-vip';
+            if (segment === '活跃用户') return 'seg-active';
+            if (segment === '潜力用户') return 'seg-potential';
+            if (segment === '流失风险') return 'seg-risk';
+            return 'seg-normal';
+        }
+        
+        // 页面加载
+        init();
+        
+        // 窗口resize
+        window.addEventListener('resize', () => {
+            ['rankChart', 'segmentChart', 'dailyTrendChart', 'weeklyTrendChart', 'venueRankChart'].forEach(id => {
+                const chart = echarts.getInstanceByDom(document.getElementById(id));
+                chart && chart.resize();
+            });
+        });
+    </script>
+</body>
+</html>

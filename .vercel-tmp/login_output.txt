@@ -1,0 +1,4 @@
+> 
+  Visit https://vercel.com/oauth/device?user_code=KJSM-JRGS
+
+Waiting for authentication...

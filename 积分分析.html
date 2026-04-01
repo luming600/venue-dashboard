@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>天梯赛积分流水分析</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Microsoft YaHei, sans-serif; background: #1a1a2e; color: #fff; padding: 20px; }
+        .header { text-align: center; padding: 20px; background: linear-gradient(90deg, #F26522, #ff8c42); border-radius: 15px; margin-bottom: 20px; }
+        .header h1 { font-size: 28px; }
+        .header p { opacity: 0.9; margin-top: 5px; }
+        .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; text-align: center; }
+        .stat-card .value { font-size: 32px; font-weight: bold; color: #F26522; }
+        .stat-card .label { color: #aaa; margin-top: 5px; }
+        .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .chart-box { background: rgba(255,255,255,0.1); border-radius: 15px; padding: 20px; }
+        .chart-title { font-size: 16px; margin-bottom: 15px; border-left: 3px solid #F26522; padding-left: 10px; }
+        .chart { height: 300px; }
+        .table-box { background: rgba(255,255,255,0.1); border-radius: 15px; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: rgba(242,101,34,0.3); padding: 12px; text-align: left; }
+        td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        tr:hover { background: rgba(255,255,255,0.05); }
+        .scroll { max-height: 300px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>天梯赛积分流水分析</h1>
+        <p>数据时间：2026年3月 | 共 4,983 条记录</p>
+    </div>
+    
+    <div class="stats">
+        <div class="stat-card"><div class="value">4,983</div><div class="label">积分流水记录</div></div>
+        <div class="stat-card"><div class="value">419,769</div><div class="label">积分发放总量</div></div>
+        <div class="stat-card"><div class="value">1,210</div><div class="label">活跃玩家数</div></div>
+        <div class="stat-card"><div class="value">60</div><div class="label">活跃球馆数</div></div>
+        <div class="stat-card"><div class="value">84</div><div class="label">场均积分</div></div>
+    </div>
+    
+    <div class="charts">
+        <div class="chart-box"><div class="chart-title">积分类型分布</div><div class="chart" id="typeChart"></div></div>
+        <div class="chart-box"><div class="chart-title">球馆活跃度 Top10</div><div class="chart" id="venueChart"></div></div>
+        <div class="chart-box"><div class="chart-title">积分区间分布</div><div class="chart" id="rangeChart"></div></div>
+        <div class="chart-box"><div class="chart-title">每日积分趋势</div><div class="chart" id="trendChart"></div></div>
+    </div>
+    
+    <div class="table-box">
+        <div class="chart-title">积分流水明细</div>
+        <div class="scroll">
+            <table><thead><tr><th>球馆</th><th>用户ID</th><th>昵称</th><th>类型</th><th>积分</th><th>时间</th></tr></thead><tbody id="tbody"></tbody></table>
+        </div>
+    </div>
+
+    <script>
+        // 积分类型分布
+        echarts.init(document.getElementById('typeChart')).setOption({
+            tooltip: {trigger: 'item'},
+            series: [{type: 'pie', radius: '60%', data: [
+                {name: '球局胜利结算', value: 4487},
+                {name: '手动加积分', value: 129},
+                {name: '邀请新用户', value: 96},
+                {name: '新用户奖励', value: 93},
+                {name: '积分兑换', value: 65},
+                {name: '其他', value: 113}
+            ]}]
+        });
+        
+        // 球馆活跃度
+        echarts.init(document.getElementById('venueChart')).setOption({
+            tooltip: {trigger: 'axis'},
+            xAxis: {type: 'value'},
+            yAxis: {type: 'category', data: ['名仕台球','石河子康溪','V8禁区','壹品台球','武昌万象城','燃竞技','星云台球','乌达区慢时空','龙禧台球','乔氏台球']},
+            series: [{type: 'bar', data: [205,221,232,268,282,311,324,485,506,531], itemStyle: {color: '#00CED1'}}]
+        });
+        
+        // 积分区间
+        echarts.init(document.getElementById('rangeChart')).setOption({
+            tooltip: {trigger: 'axis'},
+            xAxis: {type: 'category', data: ['1-10', '11-20', '21-50', '51-100', '100+']},
+            yAxis: {type: 'value'},
+            series: [{type: 'bar', data: [182, 732, 2711, 1009, 349], itemStyle: {color: '#FFD700'}}]
+        });
+        
+        // 每日趋势
+        echarts.init(document.getElementById('trendChart')).setOption({
+            tooltip: {trigger: 'axis'},
+            xAxis: {type: 'category', data: ['03-02','03-03','03-04','03-05','03-06','03-07','03-08','03-09','03-10','03-11','03-12','03-13','03-14','03-15','03-16','03-17','03-18','03-19','03-20','03-21','03-22','03-23','03-24','03-25','03-26','03-27','03-28','03-29','03-30','03-31'], axisLabel: {rotate: 45, fontSize: 10}},
+            yAxis: {type: 'value'},
+            series: [{type: 'line', data: [40,38,38,50,42,64,58,50,95,50,54,64,102,110,98,80,74,55,79,158,118,164,206,162,162,220,195,237,215,187], smooth: true, areaStyle: {opacity: 0.3}, itemStyle: {color: '#F26522'}}]
+        });
+        
+        // 表格数据
+        const tableData = [
+            ['V8禁区台球棋牌俱乐部','16282','张子恒','球局胜利结算',38,'2026-03-31 14:50'],
+            ['V8禁区台球棋牌俱乐部','15051','戴莫尔根','球局胜利结算',18,'2026-03-31 14:32'],
+            ['星云台球','13109','星云（老耿）','球局胜利结算',30,'2026-03-31 14:31'],
+            ['名仕台球（范湖万达广场店）','16604','Tom','球局胜利结算',24,'2026-03-31 14:28'],
+            ['908 竞技','8752','杆杆响客服-小余','球局胜利结算',18,'2026-03-31 14:25'],
+            ['908 竞技','13642','万位','球局胜利结算',21,'2026-03-31 14:24'],
+            ['星云台球','16753','1','球局胜利结算',30,'2026-03-31 14:21'],
+            ['星汇桌球俱乐部','16750','岩松','球局胜利结算',35,'2026-03-31 14:05'],
+            ['V8禁区台球棋牌俱乐部','15051','戴莫尔根','球局胜利结算',18,'2026-03-31 13:54'],
+            ['八度台球俱乐部','15803','Meet.','球局胜利结算',75,'2026-03-31 13:54']
+        ];
+        
+        document.getElementById('tbody').innerHTML = tableData.map(d => 
+            '<tr><td>'+d[0]+'</td><td>'+d[1]+'</td><td>'+d[2]+'</td><td>'+d[3]+'</td><td style="color:#00C853">+'+d[4]+'</td><td>'+d[5]+'</td></tr>'
+        ).join('');
+    </script>
+</body>
+</html>
